@@ -10,8 +10,13 @@ import com.ihrm.system.dao.RoleDao;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.CriteriaQuery;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -65,7 +70,7 @@ public class RoleService extends BaseService {
     /**
      * 查询全部部门列表
      */
-    public Page<Role> findAll(Map<String,Object> map, int page, int size) {
+    public Page<Role> findAllss(Map<String,Object> map, int page, int size) {
         //1.需要查询条件
         /**
          * 动态拼接查询条件
@@ -119,4 +124,16 @@ public class RoleService extends BaseService {
         //更新角色
         roleDao.save(role);
     }
+
+    public Page<Role> findAll(Map<String,Object> map, int page, int size) {
+        Specification<Role> specification = new Specification<Role>() {
+                @Override
+        public Predicate toPredicate(Root<Role> root, CriteriaQuery<?> query,
+                                 CriteriaBuilder cb) {
+                            return cb.equal(root.get("companyId").as(String.class),map.get("companyId"));
+                 }
+        };
+                 return roleDao.findAll(specification, PageRequest.of(page-1, size));
+
+        }
 }

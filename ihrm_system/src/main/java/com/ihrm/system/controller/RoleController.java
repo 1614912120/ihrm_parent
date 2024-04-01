@@ -85,7 +85,7 @@ public class RoleController extends BaseController {
     @PutMapping("/role/{id}")
     public Result update(@PathVariable("id") String id,@RequestBody Role role) {
         //设置修改的部门id
-        role.setId(id);
+        //role.setId(id);
         //service更新
         roleService.update(role);
         return new Result(ResultCode.SUCCESS);
@@ -103,7 +103,7 @@ public class RoleController extends BaseController {
     /**
      * 分配权限
      */
-    @PutMapping("/role/assignRoles")
+    @PutMapping("/role/assignPrem")
     public Result save(@RequestBody Map<String,Object> map) {
         //获取被分配角色id
         String roleId = (String)map.get("id");
@@ -113,4 +113,7 @@ public class RoleController extends BaseController {
         roleService.assginPerms(roleId,permIds);
         return new Result(ResultCode.SUCCESS);
     }
+
+
+
 }

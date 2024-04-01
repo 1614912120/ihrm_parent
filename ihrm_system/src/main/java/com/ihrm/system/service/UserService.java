@@ -128,4 +128,13 @@ public class UserService {
         //更新用户
         userDao.save(user);
     }
+
+
+    /**
+     * 根据mobile查询用户
+     */
+    public User findByMobile(String mobile) {
+        User byMobile = userDao.findByMobile(mobile);
+        return byMobile;
+    }
 }

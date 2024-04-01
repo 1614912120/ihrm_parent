@@ -4,16 +4,24 @@ import com.ihrm.common.controller.BaseController;
 import com.ihrm.common.entity.PageResult;
 import com.ihrm.common.entity.Result;
 import com.ihrm.common.entity.ResultCode;
+import com.ihrm.common.exception.CommonException;
+import com.ihrm.common.utils.JwtUtils;
 import com.ihrm.domain.company.Company;
 import com.ihrm.domain.company.response.DeptListResult;
+import com.ihrm.domain.system.Permission;
 import com.ihrm.domain.system.User;
+import com.ihrm.domain.system.response.ProfileResult;
 import com.ihrm.domain.system.response.UserResult;
+import com.ihrm.system.service.PermissionService;
 import com.ihrm.system.service.UserService;
+import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.websocket.server.PathParam;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,6 +40,11 @@ import java.util.Map;
 public class UserController extends BaseController {
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private PermissionService permissionService;
+    @Autowired
+    private JwtUtils jwtUtils;
     /**
      * 保存
      */
@@ -104,4 +117,73 @@ public class UserController extends BaseController {
         userService.assginRoles(userId,roleId);
         return new Result(ResultCode.SUCCESS);
     }
+
+
+    /**
+     * 用户登录
+     */
+    @PostMapping("/login")
+    public Result login(@RequestBody Map<String,String> loginMap){
+        String mobile = loginMap.get("mobile");
+        String password = loginMap.get("password");
+        User user = userService.findByMobile(mobile);
+        if(user == null || !user.getPassword().equals(password)) {
+            return new Result(ResultCode.MOBILEORPASSWORD);
+        }else {
+            //登录成功
+            HashMap<String, Object> map = new HashMap<>();
+            map.put("companyId",user.getCompanyId());
+            map.put("companyName",user.getCompanyName());
+            String token = jwtUtils.createJwt(user.getId(), user.getUsername(), map);
+            return new Result(ResultCode.SUCCESS,token);
+        }
+    }
+
+    /**
+     * 用户登录后获取用户信息
+     * 1.
+     */
+    @PostMapping("/profile")
+    public Result profile() throws CommonException {
+        /**
+         * 请求头获取数据
+         */
+        String authorization = request.getHeader("Authorization");
+        if(StringUtils.isEmpty(authorization)) {
+            throw new CommonException(ResultCode.UNAUTHENTICATED);
+         }
+        String token = authorization.replace("Bearer ", "");
+        Claims claims = jwtUtils.parseJwt(token);
+        String userId = claims.getId();
+        User user = userService.findById(userId);
+
+        //根据不同用户级别获取用户权限
+        ProfileResult result = null;
+        if("user".equals(user.getLevel())){
+            result = new ProfileResult(user);
+        }else {
+            HashMap map = new HashMap();
+            if("coAdmin".equals(user.getLevel())){
+                map.put("enVisible","1");
+            }
+            List<Permission> list = permissionService.findAll(map);
+            result = new ProfileResult(user,list);
+        }
+
+
+//        //1.saas管理员具有的权限
+//        if("saasAdmin".equals(user.getLevel())){
+//
+//        }
+//        //2.企业管理员具有的权限
+//        else if("coAdmin".equals(user.getLevel())){
+//
+//        }
+//        //3.企业用户具有当前角色的权限
+//        else {
+//            result = new ProfileResult(user);
+//        }
+        return new Result(ResultCode.SUCCESS,result);
+    }
 }
+
